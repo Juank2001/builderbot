@@ -151,6 +151,7 @@ export interface ParsedContact {
 export interface TextMessageBody {
     messaging_product: string
     to?: string
+    recipient?: string
     type?: string
     recipient_type?: string
     text?: {
@@ -229,16 +230,19 @@ export interface Metadata {
 export interface ContactMeta {
     profile: Profile
     wa_id: string
+    user_id: string
     name: string
     phones: string[]
 }
 
 export interface Profile {
     name: string
+    username?: string
 }
 
 export interface MessageFromMeta {
     from: string
+    from_user_id: string
     id: string
     timestamp: string
     text: Text

@@ -630,6 +630,10 @@ class CoreClass<P extends ProviderClass = any, D extends MemoryDB = any> extends
 
             msgToSend = this.flowClass.find(body, false, flowStandalone) || []
             if (msgToSend.length) return exportFunctionsSend(() => sendFlow(msgToSend, from))
+
+            // si no hubo match en nested pero el previo pedía capture,
+            // procesar como captura libre sin buscar keywords globales
+            if (prevMsg?.options?.capture) return exportFunctionsSend(() => sendFlow([], from))
         }
 
         // 📄🤘(tiene return) Si el mensaje previo implementa capture

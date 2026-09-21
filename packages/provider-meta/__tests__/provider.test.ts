@@ -103,7 +103,6 @@ describe('#MetaProvider', () => {
             const fakeBody = {
                 messaging_product: 'whatsapp',
                 recipient_type: 'individual',
-                to: '1234567890',
                 type: 'text',
                 text: {
                     preview_url: false,
@@ -461,7 +460,6 @@ describe('#MetaProvider', () => {
             expect(metaProvider.sendMessageMeta).toHaveBeenCalledWith({
                 messaging_product: 'whatsapp',
                 recipient_type: 'individual',
-                to: fakeRecipient,
                 type: 'interactive',
                 interactive: {
                     type: 'catalog_message',
@@ -501,7 +499,6 @@ describe('#MetaProvider', () => {
             // Assert
             expect(metaProvider.sendMessageMeta).toHaveBeenCalledWith({
                 messaging_product: 'whatsapp',
-                to: fakeRecipient,
                 type: 'contacts',
                 contacts: fakeContacts,
             })
@@ -518,7 +515,6 @@ describe('#MetaProvider', () => {
             // Assert
             expect(metaProvider.sendMessageMeta).toHaveBeenCalledWith({
                 messaging_product: 'whatsapp',
-                to: fakeRecipient,
                 type: 'contacts',
                 contacts: [],
             })
@@ -579,7 +575,6 @@ describe('#MetaProvider', () => {
             expect(metaProvider.sendMessageMeta).toHaveBeenCalledWith({
                 messaging_product: 'whatsapp',
                 recipient_type: 'individual',
-                to: fakeRecipient,
                 type: 'template',
                 template: {
                     name: fakeTemplate,
@@ -605,7 +600,6 @@ describe('#MetaProvider', () => {
             expect(metaProvider.sendMessageMeta).toHaveBeenCalledWith({
                 messaging_product: 'whatsapp',
                 recipient_type: 'individual',
-                to: fakeRecipient,
                 type: 'template',
                 template: {
                     name: fakeTemplate,
@@ -654,7 +648,6 @@ describe('#MetaProvider', () => {
             expect(metaProvider.sendMessageMeta).toHaveBeenCalledWith({
                 messaging_product: 'whatsapp',
                 recipient_type: 'individual',
-                to: fakeRecipient,
                 type: 'interactive',
                 interactive: {
                     type: 'cta_url',
@@ -706,7 +699,6 @@ describe('#MetaProvider', () => {
             expect(metaProvider.sendMessageMeta).toHaveBeenCalledWith({
                 messaging_product: 'whatsapp',
                 recipient_type: 'individual',
-                to: fakeRecipient,
                 type: 'interactive',
                 interactive: {
                     type: 'list',
@@ -755,7 +747,6 @@ describe('#MetaProvider', () => {
             expect(metaProvider.sendMessageMeta).toHaveBeenCalledWith({
                 messaging_product: 'whatsapp',
                 recipient_type: 'individual',
-                to: fakeRecipient,
                 type: 'interactive',
                 interactive: {
                     type: 'list',
@@ -862,7 +853,6 @@ describe('#MetaProvider', () => {
             expect(metaProvider.sendMessageMeta).toHaveBeenCalledWith({
                 messaging_product: 'whatsapp',
                 recipient_type: 'individual',
-                to: fakeRecipient,
                 type: 'video',
                 video: {
                     link: fakeUrl,
@@ -889,7 +879,6 @@ describe('#MetaProvider', () => {
             expect(axios.post).toHaveBeenCalled()
             expect(metaProvider.sendMessageMeta).toHaveBeenCalledWith({
                 messaging_product: 'whatsapp',
-                to: fakeRecipient,
                 type: 'video',
                 video: {
                     id: 'fakeMediaId',
@@ -924,7 +913,6 @@ describe('#MetaProvider', () => {
             expect(metaProvider.sendMessageMeta).toHaveBeenCalledWith({
                 messaging_product: 'whatsapp',
                 recipient_type: 'individual',
-                to: fakeRecipient,
                 type: 'image',
                 image: {
                     link: fakeImageUrl,
@@ -951,7 +939,6 @@ describe('#MetaProvider', () => {
             expect(axios.post).toHaveBeenCalled()
             expect(metaProvider.sendMessageMeta).toHaveBeenCalledWith({
                 messaging_product: 'whatsapp',
-                to: fakeRecipient,
                 type: 'image',
                 image: {
                     id: 'fakeMediaId',

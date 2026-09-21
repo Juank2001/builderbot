@@ -12,7 +12,8 @@ describe('#processIncomingMessage ', () => {
             messageId: '123',
             messageTimestamp: Date.now(),
             pushName: 'John Doe',
-            message: { type: 'text', from: 'sender', text: { body: 'Hello' } },
+            user_id: '123',
+            message: { type: 'text', from: 'sender', from_user_id: 'sender', text: { body: 'Hello' } },
             to: 'receiver',
             jwtToken: 'fakeToken',
             version: '1.0',
@@ -41,9 +42,11 @@ describe('#processIncomingMessage ', () => {
             messageId: '123',
             messageTimestamp: Date.now(),
             pushName: 'John Doe',
+            user_id: '123',
             message: {
                 type: 'interactive',
                 from: 'sender',
+                from_user_id: 'sender',
                 interactive: {
                     button_reply: { title: 'Button Reply' },
                     list_reply: { id: 'List Reply' },
@@ -78,9 +81,11 @@ describe('#processIncomingMessage ', () => {
             messageId: '123',
             messageTimestamp: Date.now(),
             pushName: 'John Doe',
+            user_id: '123',
             message: {
                 type: 'interactive',
                 from: 'sender',
+                from_user_id: 'sender',
                 interactive: {
                     list_reply: { id: 'List Reply' },
                 },
@@ -116,9 +121,11 @@ describe('#processIncomingMessage ', () => {
             messageId: '123',
             messageTimestamp: Date.now(),
             pushName: 'John Doe',
+            user_id: '123',
             message: {
                 type: 'button',
                 from: 'sender',
+                from_user_id: 'sender',
                 button: { text: 'Click me', payload: 'ButtonPayload' },
             },
             to: 'receiver',
@@ -152,9 +159,11 @@ describe('#processIncomingMessage ', () => {
             messageId: '123',
             messageTimestamp: Date.now(),
             pushName: 'John Doe',
+            user_id: '123',
             message: {
                 type: 'image',
                 from: 'sender',
+                from_user_id: 'sender',
                 image: { id: 'imageId' },
             },
             to: 'receiver',
@@ -189,9 +198,11 @@ describe('#processIncomingMessage ', () => {
             messageId: '123',
             messageTimestamp: Date.now(),
             pushName: 'John Doe',
+            user_id: '123',
             message: {
                 type: 'document',
                 from: 'sender',
+                from_user_id: 'sender',
                 document: { id: 'documentId' },
             },
             to: 'receiver',
@@ -225,9 +236,11 @@ describe('#processIncomingMessage ', () => {
             messageId: '123',
             messageTimestamp: Date.now(),
             pushName: 'John Doe',
+            user_id: '123',
             message: {
                 type: 'video',
                 from: 'sender',
+                from_user_id: 'sender',
                 video: { id: 'videoId' },
             },
             to: 'receiver',
@@ -260,9 +273,11 @@ describe('#processIncomingMessage ', () => {
             messageId: '123',
             messageTimestamp: Date.now(),
             pushName: 'John Doe',
+            user_id: '123',
             message: {
                 type: 'location',
                 from: 'sender',
+                from_user_id: 'sender',
                 location: { latitude: 40.7128, longitude: -74.006 },
             },
             to: 'receiver',
@@ -296,9 +311,11 @@ describe('#processIncomingMessage ', () => {
             messageId: '123',
             messageTimestamp: Date.now(),
             pushName: 'John Doe',
+            user_id: '123',
             message: {
                 type: 'audio',
                 from: 'sender',
+                from_user_id: 'sender',
                 audio: { id: 'audioId' },
             },
             to: 'receiver',
@@ -330,9 +347,11 @@ describe('#processIncomingMessage ', () => {
             messageId: '123',
             messageTimestamp: Date.now(),
             pushName: 'John Doe',
+            user_id: '123',
             message: {
                 type: 'sticker',
                 from: 'sender',
+                from_user_id: 'sender',
                 sticker: { id: 'stickerId' },
             },
             to: 'receiver',
@@ -364,9 +383,11 @@ describe('#processIncomingMessage ', () => {
             messageId: '123',
             messageTimestamp: Date.now(),
             pushName: 'John Doe',
+            user_id: '123',
             message: {
                 type: 'contacts',
                 from: 'sender',
+                from_user_id: 'sender',
                 contacts: [{ name: 'John Smith', phones: ['123456789'] }],
             },
             to: 'receiver',
@@ -403,9 +424,11 @@ describe('#processIncomingMessage ', () => {
             messageId: '123',
             messageTimestamp: Date.now(),
             pushName: 'John Doe',
+            user_id: '123',
             message: {
                 type: 'order',
                 from: 'sender',
+                from_user_id: 'sender',
                 order: {
                     catalog_id: 'catalogId',
                     product_items: [{ id: 'productId', quantity: 2 }],
@@ -443,9 +466,11 @@ describe('#processIncomingMessage ', () => {
             messageId: '123',
             messageTimestamp: Date.now(),
             pushName: 'John Doe',
+            user_id: '123',
             message: {
                 type: 'unknown',
                 from: 'sender',
+                from_user_id: 'sender',
                 unknownField: 'example',
             },
             to: 'receiver',
@@ -461,6 +486,12 @@ describe('#processIncomingMessage ', () => {
         expect(result).toEqual({
             message_id: '123',
             timestamp: expect.any(Number),
+            body: '',
+            from: 'sender',
+            name: 'John Doe',
+            pushName: 'John Doe',
+            to: 'receiver',
+            type: 'unknown',
         })
     })
 })

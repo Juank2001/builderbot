@@ -14,165 +14,95 @@ export const processIncomingMessage = async ({
     numberId,
     fileData,
 }: ParamsIncomingMessage): Promise<Message> => {
-    let responseObj: Message
+    const responseObj: Message = {
+        type: message.type,
+        from: message.from_user_id,
+        to,
+        body: '',
+        name: pushName,
+        pushName,
+    }
 
     switch (message.type) {
         case 'text': {
-            responseObj = {
-                type: message.type,
-                from: message.from,
-                to,
-                body: message.text?.body,
-                name: pushName,
-                pushName,
-            }
+            responseObj.body = message.text?.body
             break
         }
         case 'interactive': {
-            responseObj = {
-                type: 'interactive',
-                from: message.from,
-                to,
-                body:
-                    message.interactive?.button_reply?.title ??
-                    message.interactive?.list_reply?.id ??
-                    message.interactive?.nfm_reply.response_json,
-                title_button_reply: message.interactive?.button_reply?.title,
-                title_list_reply: message.interactive?.list_reply?.title,
-                nfm_reply: message.interactive?.nfm_reply?.response_json
-                    ? JSON.parse(message.interactive?.nfm_reply?.response_json)
-                    : undefined,
-                pushName,
-                name: pushName,
-            }
+            responseObj.body =
+                message.interactive?.button_reply?.title ??
+                message.interactive?.list_reply?.id ??
+                message.interactive?.nfm_reply.response_json
+            responseObj.title_button_reply = message.interactive?.button_reply?.title
+            responseObj.title_list_reply = message.interactive?.list_reply?.title
+            responseObj.nfm_reply = message.interactive?.nfm_reply?.response_json
+                ? JSON.parse(message.interactive?.nfm_reply?.response_json)
+                : undefined
             break
         }
         case 'button': {
-            responseObj = {
-                type: 'button',
-                from: message.from,
-                to,
-                body: message.button?.text,
-                payload: message.button?.payload,
-                title_button_reply: message.button?.payload,
-                pushName,
-                name: pushName,
-            }
+            responseObj.body = message.button?.text
+            responseObj.payload = message.button?.payload
+            responseObj.title_button_reply = message.button?.payload
             break
         }
         case 'image': {
             const imageUrl = await getMediaUrl(version, message.image?.id, numberId, jwtToken)
-            responseObj = {
-                type: message.type,
-                from: message.from,
-                url: imageUrl ?? fileData?.url,
-                fileData,
-                caption: message?.image?.caption,
-                to,
-                body: EVENTS.MEDIA,
-                pushName,
-                name: pushName,
-            }
+            responseObj.url = imageUrl ?? fileData?.url
+            responseObj.fileData = fileData
+            responseObj.caption = message?.image?.caption
+            responseObj.body = EVENTS.MEDIA
             break
         }
         case 'document': {
             const documentUrl = await getMediaUrl(version, message.document?.id, numberId, jwtToken)
-            responseObj = {
-                type: message.type,
-                from: message.from,
-                url: documentUrl ?? fileData?.url,
-                fileData,
-                to,
-                body: EVENTS.DOCUMENT,
-                pushName,
-                name: pushName,
-            }
+            responseObj.url = documentUrl ?? fileData?.url
+            responseObj.fileData = fileData
+            responseObj.body = EVENTS.DOCUMENT
             break
         }
         case 'video': {
             const videoUrl = await getMediaUrl(version, message.video?.id, numberId, jwtToken)
-            responseObj = {
-                type: message.type,
-                from: message.from,
-                url: videoUrl ?? fileData?.url,
-                fileData,
-                caption: message?.video?.caption,
-                to,
-                body: EVENTS.MEDIA,
-                pushName,
-                name: pushName,
-            }
+            responseObj.url = videoUrl ?? fileData?.url
+            responseObj.fileData = fileData
+            responseObj.caption = message?.video?.caption
+            responseObj.body = EVENTS.MEDIA
             break
         }
         case 'location': {
-            responseObj = {
-                type: message.type,
-                from: message.from,
-                to,
-                latitude: message.location.latitude,
-                longitude: message.location.longitude,
-                body: EVENTS.LOCATION,
-                pushName,
-                name: pushName,
-            }
+            responseObj.latitude = message.location.latitude
+            responseObj.longitude = message.location.longitude
+            responseObj.body = EVENTS.LOCATION
             break
         }
         case 'audio': {
             const audioUrl = await getMediaUrl(version, message.audio?.id, numberId, jwtToken)
-            responseObj = {
-                type: message.type,
-                from: message.from,
-                url: audioUrl ?? fileData?.url,
-                fileData,
-                to,
-                body: EVENTS.VOICE_NOTE,
-                pushName,
-                name: pushName,
-            }
+            responseObj.url = audioUrl ?? fileData?.url
+            responseObj.fileData = fileData
+            responseObj.body = EVENTS.VOICE_NOTE
             break
         }
         case 'sticker': {
-            responseObj = {
-                type: message.type,
-                from: message.from,
-                to,
-                id: message.sticker.id,
-                body: EVENTS.MEDIA,
-                pushName,
-                name: pushName,
-            }
+            responseObj.id = message.sticker.id
+            responseObj.body = EVENTS.MEDIA
             break
         }
         case 'contacts': {
-            responseObj = {
-                type: message.type,
-                from: message.from,
-                contacts: [
-                    {
-                        name: message.contacts[0].name,
-                        phones: message.contacts[0].phones,
-                    },
-                ] as any,
-                to,
-                body: EVENTS.CONTACTS,
-                pushName,
-                name: pushName,
-            }
+            responseObj.contacts = [
+                {
+                    name: message.contacts[0].name,
+                    phones: message.contacts[0].phones,
+                },
+            ] as any
+            responseObj.body = EVENTS.CONTACTS
             break
         }
         case 'order': {
-            responseObj = {
-                type: message.type,
-                from: message.from,
-                to,
-                order: {
-                    catalog_id: message.order.catalog_id,
-                    product_items: message.order.product_items,
-                },
-                body: EVENTS.ORDER,
-                pushName,
-                name: pushName,
+            responseObj.order = {
+                catalog_id: message.order.catalog_id,
+                product_items: message.order.product_items,
             }
+            responseObj.body = EVENTS.ORDER
             break
         }
         default:

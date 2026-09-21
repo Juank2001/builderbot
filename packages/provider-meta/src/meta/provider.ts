@@ -13,6 +13,7 @@ import Queue from 'queue-promise'
 import { MetaCoreVendor } from './core'
 import { downloadFile, getProfile } from '../utils'
 import { parseMetaNumber } from '../utils/number'
+import { resolveRecipient } from '../utils/resolveRecipient'
 
 import type { MetaInterface } from '~/interface/meta'
 import type {
@@ -761,7 +762,6 @@ class MetaProvider extends ProviderClass<MetaInterface> implements MetaInterface
      * await provider.sendMessage('1234567890', 'Check this:', { media: 'https://example.com/image.jpg' })
      */
     sendMessage = async (to: string, message: string, options?: SendOptions, context?: string): Promise<any> => {
-        to = parseMetaNumber(to)
         options = { ...options, ...options['options'] }
         if (options?.buttons?.length) return this.sendButtons(to, options.buttons, message)
         if (options?.media) return this.sendMedia(to, message, options.media, context)
@@ -1083,7 +1083,13 @@ class MetaProvider extends ProviderClass<MetaInterface> implements MetaInterface
      * })
      */
     sendMessageToApi = async (body: TextMessageBody): Promise<any> => {
-        body.to = this.fixPrefixMetaNumber(body.to)
+        // Only apply phone-number normalization when `to` is a real phone number.
+        // Username-enabled users have no wa_id; their messages use `recipient` instead.
+        if (body.to) {
+            const to = body.to
+            delete body.to
+            body = { ...body, ...resolveRecipient(to) }
+        }
         try {
             const fullUrl = `${URL}/${this.globalVendorArgs.version}/${this.globalVendorArgs.numberId}/messages`
             const response = await axios.post(fullUrl, body, {
