@@ -1,3 +1,11 @@
+/**
+ * LAYER: Interface
+ * Contains: Package entry point — createBot, createFlow, createProvider, TestTool
+ * Rules: Public API surface. Composes Application/Infrastructure, no business logic.
+ * BigO: O(1) score:5
+ * keywords: [createBot, createFlow, createProvider]
+ * GOAL: Publish the framework factories and re-exports as the @builderbot/bot API.
+ */
 import { CoreClass } from './core/coreClass'
 import { EventEmitterClass } from './core/eventEmitterClass'
 import { MemoryDB } from './db'
@@ -21,6 +29,9 @@ const createBot = async <P extends ProviderClass = any, D extends MemoryDB = any
         blackList: [],
         listEvents: EVENTS,
         delay: 0,
+        logs: {
+            notices: true,
+        },
         globalState: {},
         extensions: [],
         queue: {

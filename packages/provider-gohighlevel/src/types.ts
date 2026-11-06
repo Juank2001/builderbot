@@ -1,3 +1,11 @@
+/**
+ * LAYER: Domain
+ * Contains: GHLChannelType, GHLGlobalVendorArgs, GHLOAuthTokens, GHLContact
+ * Rules: No external dependencies. Pure business logic.
+ * BigO: O(1) score:5
+ * keywords: [GHLChannelType, GHLGlobalVendorArgs, GHLOAuthTokens, GHLContact]
+ * GOAL: Own the "types" concern of the provider-gohighlevel package.
+ */
 import type { GlobalVendorArgs } from '@builderbot/bot/dist/types'
 
 export type GHLChannelType = 'SMS' | 'WhatsApp' | 'Email' | 'Live_Chat' | 'Facebook' | 'Instagram' | 'Custom'
@@ -14,6 +22,8 @@ export interface GHLGlobalVendorArgs extends GlobalVendorArgs {
     conversationProviderId?: string
     /** Optional webhook secret for signature verification (HMAC SHA256) */
     webhookSecret?: string
+    /** Optional version ID for OAuth authorization URL */
+    versionId?: string
 }
 
 export interface GHLOAuthTokens {
@@ -91,7 +101,8 @@ export interface GHLIncomingWebhook {
     email?: string
     direction?: 'inbound' | 'outbound'
     status?: string
-    attachments?: GHLAttachment[]
+    /** GHL sends this as an array of plain URL strings for InboundMessage webhooks */
+    attachments?: (GHLAttachment | string)[]
     dateAdded?: string
     [key: string]: any
 }
@@ -107,4 +118,27 @@ export interface GHLContactSearchResult {
 
 export interface SaveFileOptions {
     path?: string
+}
+
+export interface GHLPhoneNumber {
+    id: string
+    number: string
+    name?: string
+    locationId?: string
+    capabilities?: string[]
+    status?: string
+}
+
+export interface GHLEmailAccount {
+    id: string
+    email: string
+    name?: string
+    locationId?: string
+}
+
+export interface GHLChannelInfo {
+    type: 'phone' | 'email'
+    id: string
+    value: string
+    name?: string
 }

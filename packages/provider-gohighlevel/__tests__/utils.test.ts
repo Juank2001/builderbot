@@ -75,7 +75,8 @@ describe('#processIncomingMessage', () => {
         expect(result).not.toBeNull()
         expect(result!.type).toBe('text')
         expect(result!.body).toBe('Hello World')
-        expect(result!.from).toBe('1234567890')
+        // contactId is prioritized over phone for 'from' field
+        expect(result!.from).toBe('contact_123')
         expect(result!.to).toBe('loc_123')
         expect(result!.contactId).toBe('contact_123')
         expect(result!.conversationId).toBe('conv_123')
@@ -137,6 +138,26 @@ describe('#processIncomingMessage', () => {
 
         expect(result).not.toBeNull()
         expect(result!.type).toBe('audio')
+    })
+
+    test('should process inbound audio message when attachments is a plain URL string array (real GHL webhook shape)', () => {
+        const webhook: GHLIncomingWebhook = {
+            type: 'InboundMessage',
+            locationId: 'loc_123',
+            direction: 'inbound',
+            body: '',
+            phone: '+1234567890',
+            contactId: 'contact_123',
+            messageId: 'msg_audio_string',
+            attachments: ['https://example.com/voice-note.mp3'],
+        }
+
+        const result = processIncomingMessage(webhook)
+
+        expect(result).not.toBeNull()
+        expect(result!.type).toBe('audio')
+        expect(result!.url).toBe('https://example.com/voice-note.mp3')
+        expect(result!.attachments).toEqual([{ url: 'https://example.com/voice-note.mp3' }])
     })
 
     test('should process inbound message with document attachment', () => {

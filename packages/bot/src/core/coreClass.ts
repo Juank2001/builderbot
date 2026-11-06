@@ -1,3 +1,11 @@
+/**
+ * LAYER: Application
+ * Contains: CoreClass — orchestrates provider, flows, state, and persistence
+ * Rules: Orchestrates Domain and Infrastructure. No HTTP framework specifics.
+ * BigO: O(n^2) score:1
+ * keywords: [CoreClass, ProviderClass, MemoryDB]
+ * GOAL: Drive the bot runtime: route incoming messages through flows and persist state. Nested loops follow bounded message/flow walks.
+ */
 import { Console } from 'console'
 import { createWriteStream } from 'fs'
 
@@ -45,6 +53,9 @@ class CoreClass<P extends ProviderClass = any, D extends MemoryDB = any> extends
         blackList: [],
         listEvents: {},
         delay: 0,
+        logs: {
+            notices: true,
+        },
         globalState: {},
         extensions: undefined,
         queue: {
@@ -61,12 +72,20 @@ class CoreClass<P extends ProviderClass = any, D extends MemoryDB = any> extends
      * - Setup provider
      * - Setup generalArgs
      */
-    constructor(_flow: any, _database: D, _provider: P, _args: GeneralArgs) {
+    constructor(_flow: any, _database: D, _provider: P, _args: GeneralArgs | null | undefined) {
         super()
         this.flowClass = _flow
         this.database = _database
         this.provider = _provider
-        this.generalArgs = { ...this.generalArgs, ..._args }
+        const args = _args ?? {}
+        this.generalArgs = {
+            ...this.generalArgs,
+            ...args,
+            logs: {
+                ...this.generalArgs.logs,
+                ...(args.logs ?? {}),
+            },
+        }
 
         this.dynamicBlacklist.add(this.generalArgs.blackList)
 
@@ -98,7 +117,10 @@ class CoreClass<P extends ProviderClass = any, D extends MemoryDB = any> extends
         },
         {
             event: 'notice',
-            func: ({ instructions, title = '' }) => printer(instructions, title, 'bgMagenta'),
+            func: ({ instructions, title = '' }) => {
+                if (this.generalArgs.logs?.notices === false) return
+                printer(instructions, title, 'bgMagenta')
+            },
         },
         {
             event: 'ready',
@@ -180,7 +202,7 @@ class CoreClass<P extends ProviderClass = any, D extends MemoryDB = any> extends
             },
             index = 0
         ) => {
-            const body = typeof payload === 'string' ? payload : payload?.body ?? payload?.answer
+            const body = typeof payload === 'string' ? payload : (payload?.body ?? payload?.answer)
             const media = payload?.media ?? null
             const buttons = payload?.buttons ?? []
             const capture = payload?.capture ?? false
@@ -312,9 +334,15 @@ class CoreClass<P extends ProviderClass = any, D extends MemoryDB = any> extends
             try {
                 await this.queuePrincipal.enqueue(
                     from,
-                    async () => {
+                    async (signal) => {
+                        // Cancelación cooperativa: si el item ya expiró/limpió, no continuar la cadena
+                        if (signal?.cancelled) return
+
                         await this.sendProviderAndSave(numberOrId, ctxMessage)
-                            .then(() => resolveCbEveryCtx(ctxMessage))
+                            .then(() => {
+                                if (signal?.cancelled) return
+                                return resolveCbEveryCtx(ctxMessage)
+                            })
                             .catch((error) => {
                                 logger.error(`Error en sendProviderAndSave (ID ${ctxMessage.ref}):`, error)
                                 throw error
@@ -322,7 +350,8 @@ class CoreClass<P extends ProviderClass = any, D extends MemoryDB = any> extends
 
                         logger.log(`[QUEUE_SE_ENVIO]: `, ctxMessage)
                     },
-                    ctxMessage.ref
+                    ctxMessage.ref,
+                    ctxMessage?.options?.timeout
                 )
             } catch (error) {
                 logger.error(`Error al encolar (ID ${ctxMessage.ref}):`, error)
@@ -376,7 +405,7 @@ class CoreClass<P extends ProviderClass = any, D extends MemoryDB = any> extends
                 flag.fallBack = true
                 await this.sendProviderAndSave(from, {
                     ...prevMsg,
-                    answer: typeof message === 'string' ? message : message?.body ?? prevMsg.answer,
+                    answer: typeof message === 'string' ? message : (message?.body ?? prevMsg.answer),
                     options: {
                         ...prevMsg.options,
                         buttons: prevMsg.options?.buttons,
@@ -675,6 +704,10 @@ class CoreClass<P extends ProviderClass = any, D extends MemoryDB = any> extends
             if (LIST_REGEX.REGEX_EVENT_CALL.test(body)) {
                 msgToSend = this.flowClass.find(this.generalArgs.listEvents.CALL) || []
             }
+
+            if (LIST_REGEX.REGEX_EVENT_CONTACTS.test(body)) {
+                msgToSend = this.flowClass.find(this.generalArgs.listEvents.CONTACTS) || []
+            }
         }
 
         await this.stateHandler.updateState({ from })({ __end_flow__: false })
@@ -729,8 +762,12 @@ class CoreClass<P extends ProviderClass = any, D extends MemoryDB = any> extends
             await delay(delayMs)
             await this.queuePrincipal.enqueue(
                 numberOrId,
-                () => this.sendProviderAndSave(numberOrId, ctxMessage),
-                ctxMessage.ref
+                (signal) => {
+                    if (signal?.cancelled) return Promise.resolve()
+                    return this.sendProviderAndSave(numberOrId, ctxMessage)
+                },
+                ctxMessage.ref,
+                ctxMessage?.options?.timeout
             )
             // await queuePromises.dequeue()
         }
@@ -772,6 +809,30 @@ class CoreClass<P extends ProviderClass = any, D extends MemoryDB = any> extends
             }),
             ctxMethods: this.buildCtxMethods(),
         })
+    }
+
+    /**
+     * Detiene el runtime del bot: cierra el servidor HTTP del provider y limpia la cola.
+     * Es seguro llamarlo aunque el servidor no se haya iniciado (p. ej. providers sin HTTP,
+     * tests o `stop()` antes de `httpServer()`): ese caso se ignora silenciosamente.
+     */
+    public async stop(): Promise<void> {
+        try {
+            await this.queuePrincipal.clearAll()
+        } catch (error) {
+            logger.error(`[stop:queue]: ${JSON.stringify(error)}`)
+        }
+        try {
+            const providerStop = (this.provider as { stop?: () => Promise<void> })?.stop
+            if (typeof providerStop === 'function') {
+                await providerStop.call(this.provider)
+            }
+        } catch (error) {
+            const code = (error as NodeJS.ErrnoException)?.code
+            if (code !== 'ERR_SERVER_NOT_RUNNING') {
+                logger.error(`[stop]: ${JSON.stringify(error)}`)
+            }
+        }
     }
 
     /**

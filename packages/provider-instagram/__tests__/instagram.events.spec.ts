@@ -1,7 +1,8 @@
 import { utils } from '@builderbot/bot'
 import { beforeEach, describe, expect, jest, it } from '@jest/globals'
 
-import { InstagramEvents, InstagramMessage } from '../src/instagram.events'
+import { InstagramEvents, InstagramMessage, InstagramListenMode } from '../src/instagram.events'
+import { instagramEvents as igEventsConst } from '../src/instagram.events.constants'
 
 jest.mock('@builderbot/bot', () => ({
     EventEmitterClass: class {
@@ -9,6 +10,7 @@ jest.mock('@builderbot/bot', () => ({
     },
     utils: {
         generateRefProvider: jest.fn().mockImplementation((type) => `REF:${type}`),
+        setEvent: jest.fn().mockReturnValue('_mock_ig_comment_event_'),
     },
 }))
 
@@ -333,7 +335,7 @@ describe('InstagramEvents', () => {
             )
         })
 
-        it('should ignore echo messages', () => {
+        it('should not emit a user message for echo messages (emits host instead)', () => {
             const payload: InstagramMessage = {
                 object: 'instagram',
                 entry: [
@@ -349,6 +351,295 @@ describe('InstagramEvents', () => {
                                     mid: 'message_id',
                                     text: 'Echo message',
                                     is_echo: true,
+                                },
+                            },
+                        ],
+                    },
+                ],
+            }
+
+            instagramEvents.eventInMsg(payload)
+
+            // Echo messages are outbound (sent by the account itself), so they
+            // must NOT be processed as inbound user messages...
+            expect(instagramEvents.emit).not.toHaveBeenCalledWith('message', expect.anything())
+            // ...but they ARE emitted as 'host' events so the CRM can track
+            // outbound messages. recipient.id is the actual user (fromMe: true).
+            expect(instagramEvents.emit).toHaveBeenCalledWith(
+                'host',
+                expect.objectContaining({
+                    body: 'Echo message',
+                    from: 'recipient_id',
+                    fromMe: true,
+                    messageId: 'message_id',
+                })
+            )
+        })
+
+        it('should handle comment events when listenMode is comment', () => {
+            instagramEvents.setListenMode('comment')
+
+            const payload: InstagramMessage = {
+                object: 'instagram',
+                entry: [
+                    {
+                        id: 'page_id',
+                        time: 1614714981098,
+                        changes: [
+                            {
+                                field: 'comments',
+                                value: {
+                                    from: {
+                                        id: 'commenter_id',
+                                        username: 'testuser',
+                                    },
+                                    media: {
+                                        id: 'media_123',
+                                        media_product_type: 'FEED',
+                                    },
+                                    id: 'comment_456',
+                                    text: 'Nice post!',
+                                    timestamp: '2024-01-01T00:00:00+0000',
+                                },
+                            },
+                        ],
+                    },
+                ],
+            }
+
+            instagramEvents.eventInMsg(payload)
+
+            expect(instagramEvents.emit).toHaveBeenCalledWith('message', {
+                body: igEventsConst.IG_COMMENT,
+                from: 'commenter_id',
+                name: 'testuser',
+                username: 'testuser',
+                host: {
+                    id: 'page_id',
+                    phone: 'instagram',
+                },
+                timestamp: expect.any(Number),
+                messageId: 'comment_comment_456',
+                comment: {
+                    id: 'comment_456',
+                    parentId: null,
+                    mediaId: 'media_123',
+                    username: 'testuser',
+                    text: 'Nice post!',
+                },
+            })
+        })
+
+        it("should ignore comments authored by the bot's own account (self-reply loop guard)", () => {
+            instagramEvents.setListenMode('comment')
+
+            const payload: InstagramMessage = {
+                object: 'instagram',
+                entry: [
+                    {
+                        id: 'page_id',
+                        time: 1614714981098,
+                        changes: [
+                            {
+                                field: 'comments',
+                                value: {
+                                    from: {
+                                        id: 'page_id',
+                                        username: 'bot_account',
+                                    },
+                                    media: {
+                                        id: 'media_123',
+                                        media_product_type: 'REELS',
+                                    },
+                                    id: 'comment_self_reply',
+                                    text: 'revisa el dm',
+                                    timestamp: '2024-01-01T00:00:00+0000',
+                                },
+                            },
+                        ],
+                    },
+                ],
+            }
+
+            instagramEvents.eventInMsg(payload)
+
+            expect(instagramEvents.emit).not.toHaveBeenCalled()
+        })
+
+        it('should handle comment events with parent_id (reply to comment)', () => {
+            instagramEvents.setListenMode('comment')
+
+            const payload: InstagramMessage = {
+                object: 'instagram',
+                entry: [
+                    {
+                        id: 'page_id',
+                        time: 1614714981098,
+                        changes: [
+                            {
+                                field: 'comments',
+                                value: {
+                                    from: {
+                                        id: 'commenter_id',
+                                        username: 'replier',
+                                    },
+                                    media: {
+                                        id: 'media_123',
+                                    },
+                                    id: 'comment_789',
+                                    parent_id: 'comment_456',
+                                    text: 'I agree!',
+                                    timestamp: '2024-01-01T00:00:00+0000',
+                                },
+                            },
+                        ],
+                    },
+                ],
+            }
+
+            instagramEvents.eventInMsg(payload)
+
+            expect(instagramEvents.emit).toHaveBeenCalledWith(
+                'message',
+                expect.objectContaining({
+                    body: igEventsConst.IG_COMMENT,
+                    comment: expect.objectContaining({
+                        parentId: 'comment_456',
+                        text: 'I agree!',
+                    }),
+                })
+            )
+        })
+
+        it('should handle both messages and comments when listenMode is both', () => {
+            instagramEvents.setListenMode('both')
+
+            const payload: InstagramMessage = {
+                object: 'instagram',
+                entry: [
+                    {
+                        id: 'page_id',
+                        time: 1614714981098,
+                        messaging: [
+                            {
+                                sender: { id: 'sender_id' },
+                                recipient: { id: 'recipient_id' },
+                                timestamp: 1614714981098,
+                                message: {
+                                    mid: 'message_id',
+                                    text: 'Hello DM',
+                                },
+                            },
+                        ],
+                        changes: [
+                            {
+                                field: 'comments',
+                                value: {
+                                    from: {
+                                        id: 'commenter_id',
+                                        username: 'testuser',
+                                    },
+                                    media: {
+                                        id: 'media_123',
+                                    },
+                                    id: 'comment_456',
+                                    text: 'Nice!',
+                                    timestamp: '2024-01-01T00:00:00+0000',
+                                },
+                            },
+                        ],
+                    },
+                ],
+            }
+
+            instagramEvents.eventInMsg(payload)
+
+            expect(instagramEvents.emit).toHaveBeenCalledTimes(2)
+            expect(instagramEvents.emit).toHaveBeenCalledWith('message', expect.objectContaining({ body: 'Hello DM' }))
+            expect(instagramEvents.emit).toHaveBeenCalledWith(
+                'message',
+                expect.objectContaining({
+                    body: igEventsConst.IG_COMMENT,
+                    comment: expect.objectContaining({ text: 'Nice!' }),
+                })
+            )
+        })
+
+        it('should ignore comments when listenMode is message', () => {
+            instagramEvents.setListenMode('message')
+
+            const payload: InstagramMessage = {
+                object: 'instagram',
+                entry: [
+                    {
+                        id: 'page_id',
+                        time: 1614714981098,
+                        changes: [
+                            {
+                                field: 'comments',
+                                value: {
+                                    from: { id: 'commenter_id', username: 'testuser' },
+                                    media: { id: 'media_123' },
+                                    id: 'comment_456',
+                                    text: 'Ignored comment',
+                                    timestamp: '2024-01-01T00:00:00+0000',
+                                },
+                            },
+                        ],
+                    },
+                ],
+            }
+
+            instagramEvents.eventInMsg(payload)
+            expect(instagramEvents.emit).not.toHaveBeenCalled()
+        })
+
+        it('should ignore messages when listenMode is comment', () => {
+            instagramEvents.setListenMode('comment')
+
+            const payload: InstagramMessage = {
+                object: 'instagram',
+                entry: [
+                    {
+                        id: 'ig_id',
+                        time: 1614714981098,
+                        messaging: [
+                            {
+                                sender: { id: 'sender_id' },
+                                recipient: { id: 'recipient_id' },
+                                timestamp: 1614714981098,
+                                message: {
+                                    mid: 'message_id',
+                                    text: 'Ignored DM',
+                                },
+                            },
+                        ],
+                    },
+                ],
+            }
+
+            instagramEvents.eventInMsg(payload)
+            expect(instagramEvents.emit).not.toHaveBeenCalled()
+        })
+
+        it('should ignore non-comment changes', () => {
+            instagramEvents.setListenMode('comment')
+
+            const payload: InstagramMessage = {
+                object: 'instagram',
+                entry: [
+                    {
+                        id: 'page_id',
+                        time: 1614714981098,
+                        changes: [
+                            {
+                                field: 'mentions',
+                                value: {
+                                    from: { id: 'user_id' },
+                                    media: { id: 'media_123' },
+                                    id: 'mention_123',
+                                    text: '@bot hello',
+                                    timestamp: '2024-01-01T00:00:00+0000',
                                 },
                             },
                         ],
