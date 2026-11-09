@@ -6,8 +6,9 @@
     "packages/create-builderbot",
     "packages/database-mongo",
     "packages/database-mysql",
-    "packages/database-json",
+    
     "packages/database-postgres",
+    "packages/database-redis",
     "packages/eslint-plugin-builderbot",
     "packages/manager",
     "packages/provider-meta",
